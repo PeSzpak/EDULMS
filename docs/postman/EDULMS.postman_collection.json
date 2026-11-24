@@ -1,0 +1,368 @@
+{
+  "info": {
+    "name": "EDULMS",
+    "description": "API do EDULMS (Express + Sequelize + PostgreSQL). Rode na ordem: Users > Courses > Modules > Contents; os ids criados ficam nas variáveis. As rotas de Courses estão quebradas no código atual (ver README).",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:3000"
+    },
+    {
+      "key": "token",
+      "value": ""
+    },
+    {
+      "key": "userId",
+      "value": ""
+    },
+    {
+      "key": "courseId",
+      "value": ""
+    },
+    {
+      "key": "moduleId",
+      "value": ""
+    },
+    {
+      "key": "contentId",
+      "value": ""
+    }
+  ],
+  "item": [
+    {
+      "name": "Root",
+      "request": {
+        "method": "GET",
+        "url": "{{baseUrl}}/"
+      }
+    },
+    {
+      "name": "Users",
+      "description": "Filtros da listagem são ignorados pelo controller.",
+      "item": [
+        {
+          "name": "Criar Users",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 201) pm.collectionVariables.set('userId', pm.response.json().id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/users",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Ana Ribeiro\",\n  \"email\": \"ana.ribeiro@exemplo.com\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Listar Users",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/users"
+          }
+        },
+        {
+          "name": "Buscar Users",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/users/{{userId}}"
+          }
+        },
+        {
+          "name": "Atualizar Users",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/users/{{userId}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"inactive\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Remover Users",
+          "request": {
+            "method": "DELETE",
+            "url": "{{baseUrl}}/users/{{userId}}"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Courses",
+      "description": "Hoje respondem 400 \"Model not initialized\" (e 500 no GET por id).",
+      "item": [
+        {
+          "name": "Criar Courses",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 201) pm.collectionVariables.set('courseId', pm.response.json().id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/courses",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Introdução ao TypeScript\",\n  \"uniqueCode\": \"TS-101\",\n  \"description\": \"Tipos, interfaces e generics\",\n  \"userId\": \"{{userId}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Listar Courses",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/courses?title=type"
+          }
+        },
+        {
+          "name": "Buscar Courses",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/courses/{{courseId}}"
+          }
+        },
+        {
+          "name": "Atualizar Courses",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/courses/{{courseId}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"description\": \"Nova descrição\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Remover Courses",
+          "request": {
+            "method": "DELETE",
+            "url": "{{baseUrl}}/courses/{{courseId}}"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Modules",
+      "item": [
+        {
+          "name": "Criar Modules",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 201) pm.collectionVariables.set('moduleId', pm.response.json().id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/modules",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Tipos básicos\",\n  \"courseId\": \"{{courseId}}\",\n  \"userId\": \"{{userId}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Listar Modules",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/modules?courseId={{courseId}}"
+          }
+        },
+        {
+          "name": "Buscar Modules",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/modules/{{moduleId}}"
+          }
+        },
+        {
+          "name": "Atualizar Modules",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/modules/{{moduleId}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"description\": \"Primeiro módulo\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Remover Modules",
+          "request": {
+            "method": "DELETE",
+            "url": "{{baseUrl}}/modules/{{moduleId}}"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Contents",
+      "item": [
+        {
+          "name": "Criar Contents",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 201) pm.collectionVariables.set('contentId', pm.response.json().id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/contents",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"string, number e boolean\",\n  \"content\": \"Texto da aula\",\n  \"moduleId\": \"{{moduleId}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Listar Contents",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/contents?moduleId={{moduleId}}"
+          }
+        },
+        {
+          "name": "Buscar Contents",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/contents/{{contentId}}"
+          }
+        },
+        {
+          "name": "Atualizar Contents",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/contents/{{contentId}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Tipos primitivos\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Remover Contents",
+          "request": {
+            "method": "DELETE",
+            "url": "{{baseUrl}}/contents/{{contentId}}"
+          }
+        }
+      ]
+    }
+  ]
+}
