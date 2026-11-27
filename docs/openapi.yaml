@@ -1,0 +1,457 @@
+openapi: 3.0.3
+info:
+  title: EDULMS API
+  version: 1.0.0
+  description: |
+    API REST de um LMS simples (usuários, cursos, módulos e conteúdos) em Express 5 + Sequelize + PostgreSQL.
+    Feita para o processo seletivo da MM. Sem autenticação.
+
+    Estado real das rotas (testado contra PostgreSQL 16):
+    - `/users`, `/modules` e `/contents` funcionam.
+    - `/courses` responde 400 "Model not initialized" em todas as operações que tocam o banco, porque o arquivo
+      `src/models/course.ts` não bate com o nome da classe `Course` (ver README). `GET /courses/{id}` responde 500,
+      porque o `CourseController` não tem o método `getById`.
+  license:
+    name: ISC
+    url: https://opensource.org/license/isc-license-txt
+servers:
+  - url: http://localhost:3000
+    description: Servidor local (npm run dev)
+security: []
+tags:
+  - name: Users
+    description: Autores dos cursos e módulos
+  - name: Courses
+    description: Cursos (rotas quebradas, ver descrição da API)
+  - name: Modules
+    description: Módulos de um curso
+  - name: Contents
+    description: Conteúdos (aulas) de um módulo
+paths:
+  /:
+    get:
+      summary: Mensagem de boas-vindas
+      operationId: root
+      responses:
+        "200":
+          description: Texto simples
+          content:
+            text/plain:
+              schema: { type: string, example: API ModuLMS em TypeScript! }
+  /users:
+    get:
+      tags: [Users]
+      summary: Lista todos os usuários
+      description: Os filtros de `ListUsersDTO` existem no service, mas o controller chama `getAll()` e ignora a query string.
+      operationId: listUsers
+      responses:
+        "200":
+          description: Usuários
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: "#/components/schemas/User" } }
+        "400": { $ref: "#/components/responses/BadRequest" }
+    post:
+      tags: [Users]
+      summary: Cria um usuário
+      operationId: createUser
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/UserInput" }
+            example: { name: Ana Ribeiro, email: ana.ribeiro@exemplo.com }
+      responses:
+        "201":
+          description: Criado
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/User" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+  /users/{id}:
+    parameters: [{ $ref: "#/components/parameters/Id" }]
+    get:
+      tags: [Users]
+      summary: Busca um usuário
+      operationId: getUser
+      responses:
+        "200":
+          description: Usuário
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/User" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    put:
+      tags: [Users]
+      summary: Atualiza um usuário
+      operationId: updateUser
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/UserUpdate" }
+            example: { status: inactive }
+      responses:
+        "200":
+          description: Usuário atualizado
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/User" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    delete:
+      tags: [Users]
+      summary: Remove um usuário
+      description: Falha com 400 se o usuário for autor de algum curso ou módulo (FK com ON DELETE RESTRICT).
+      operationId: deleteUser
+      responses:
+        "204": { description: Removido }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "404": { $ref: "#/components/responses/NotFound" }
+  /courses:
+    get:
+      tags: [Courses]
+      summary: Lista cursos
+      operationId: listCourses
+      parameters:
+        - { name: title, in: query, schema: { type: string }, description: Busca parcial sem diferenciar maiúsculas (ILIKE) }
+        - { name: uniqueCode, in: query, schema: { type: string } }
+        - { name: userId, in: query, schema: { type: string, format: uuid } }
+      responses:
+        "200":
+          description: Cursos
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: "#/components/schemas/Course" } }
+        "400": { $ref: "#/components/responses/BadRequest" }
+    post:
+      tags: [Courses]
+      summary: Cria um curso
+      operationId: createCourse
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CourseInput" }
+            example:
+              title: Introdução ao TypeScript
+              uniqueCode: TS-101
+              description: Tipos, interfaces e generics
+              userId: 92b0bbae-7649-4fdd-bf31-b1d108302312
+      responses:
+        "201":
+          description: Criado
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Course" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+  /courses/{id}:
+    parameters: [{ $ref: "#/components/parameters/Id" }]
+    get:
+      tags: [Courses]
+      summary: Busca um curso (não implementado)
+      description: A rota existe, mas `CourseController.getById` não existe; o Express responde 500 com uma página HTML de erro.
+      operationId: getCourse
+      responses:
+        "500":
+          description: TypeError controller.getById is not a function
+          content:
+            text/html:
+              schema: { type: string }
+    put:
+      tags: [Courses]
+      summary: Atualiza um curso
+      operationId: updateCourse
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CourseUpdate" }
+      responses:
+        "200":
+          description: Curso atualizado
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Course" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    delete:
+      tags: [Courses]
+      summary: Remove um curso (e, em cascata, seus módulos e conteúdos)
+      operationId: deleteCourse
+      responses:
+        "204": { description: Removido }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "404": { $ref: "#/components/responses/NotFound" }
+  /modules:
+    get:
+      tags: [Modules]
+      summary: Lista módulos
+      operationId: listModules
+      parameters:
+        - { name: courseId, in: query, schema: { type: string, format: uuid } }
+        - { name: title, in: query, schema: { type: string }, description: Busca parcial (ILIKE) }
+        - { name: userId, in: query, schema: { type: string, format: uuid } }
+      responses:
+        "200":
+          description: Módulos
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: "#/components/schemas/Module" } }
+        "400": { $ref: "#/components/responses/BadRequest" }
+    post:
+      tags: [Modules]
+      summary: Cria um módulo
+      operationId: createModule
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ModuleInput" }
+            example:
+              title: Tipos básicos
+              courseId: ec21e6b4-b2df-4fa8-a911-7efc01779908
+              userId: 92b0bbae-7649-4fdd-bf31-b1d108302312
+      responses:
+        "201":
+          description: Criado
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Module" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+  /modules/{id}:
+    parameters: [{ $ref: "#/components/parameters/Id" }]
+    get:
+      tags: [Modules]
+      summary: Busca um módulo
+      operationId: getModule
+      responses:
+        "200":
+          description: Módulo
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Module" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    put:
+      tags: [Modules]
+      summary: Atualiza um módulo
+      operationId: updateModule
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ModuleUpdate" }
+            example: { description: Primeiro módulo }
+      responses:
+        "200":
+          description: Módulo atualizado
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Module" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    delete:
+      tags: [Modules]
+      summary: Remove um módulo (e seus conteúdos)
+      operationId: deleteModule
+      responses:
+        "204": { description: Removido }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "404": { $ref: "#/components/responses/NotFound" }
+  /contents:
+    get:
+      tags: [Contents]
+      summary: Lista conteúdos
+      operationId: listContents
+      parameters:
+        - { name: moduleId, in: query, schema: { type: string, format: uuid } }
+        - { name: title, in: query, schema: { type: string }, description: Busca parcial (ILIKE) }
+      responses:
+        "200":
+          description: Conteúdos
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: "#/components/schemas/Content" } }
+        "400": { $ref: "#/components/responses/BadRequest" }
+    post:
+      tags: [Contents]
+      summary: Cria um conteúdo
+      operationId: createContent
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ContentInput" }
+            example:
+              title: string, number e boolean
+              content: Texto da aula
+              moduleId: 001623bd-0f0b-4e0c-8550-0e4596e2ac41
+      responses:
+        "201":
+          description: Criado
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Content" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+  /contents/{id}:
+    parameters: [{ $ref: "#/components/parameters/Id" }]
+    get:
+      tags: [Contents]
+      summary: Busca um conteúdo
+      operationId: getContent
+      responses:
+        "200":
+          description: Conteúdo
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Content" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    put:
+      tags: [Contents]
+      summary: Atualiza um conteúdo
+      operationId: updateContent
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ContentUpdate" }
+      responses:
+        "200":
+          description: Conteúdo atualizado
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Content" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    delete:
+      tags: [Contents]
+      summary: Remove um conteúdo
+      operationId: deleteContent
+      responses:
+        "204": { description: Removido }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "404": { $ref: "#/components/responses/NotFound" }
+components:
+  parameters:
+    Id:
+      name: id
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+      description: UUID; um valor que não é UUID volta 400 do PostgreSQL
+  responses:
+    BadRequest:
+      description: Campo obrigatório ausente, erro de validação do Sequelize ou erro do banco
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error: { type: string, example: "notNull Violation: User.email cannot be null" }
+    NotFound:
+      description: Registro não encontrado
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              message: { type: string, example: User not found }
+  schemas:
+    Timestamps:
+      type: object
+      properties:
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+    User:
+      allOf:
+        - type: object
+          properties:
+            id: { type: string, format: uuid }
+            name: { type: string }
+            email: { type: string, format: email }
+            status: { type: string, enum: [active, inactive] }
+        - $ref: "#/components/schemas/Timestamps"
+    UserInput:
+      type: object
+      required: [name, email]
+      properties:
+        name: { type: string }
+        email: { type: string, format: email, description: Único }
+        status: { type: string, enum: [active, inactive], default: active }
+    UserUpdate:
+      type: object
+      properties:
+        name: { type: string }
+        email: { type: string, format: email }
+        status: { type: string, enum: [active, inactive] }
+    Course:
+      allOf:
+        - type: object
+          properties:
+            id: { type: string, format: uuid }
+            uniqueCode: { type: string }
+            title: { type: string }
+            description: { type: string, nullable: true }
+            userId: { type: string, format: uuid }
+        - $ref: "#/components/schemas/Timestamps"
+    CourseInput:
+      type: object
+      required: [title, uniqueCode, userId]
+      properties:
+        title: { type: string }
+        uniqueCode: { type: string, description: Único }
+        description: { type: string }
+        userId: { type: string, format: uuid }
+    CourseUpdate:
+      type: object
+      properties:
+        title: { type: string }
+        uniqueCode: { type: string }
+        description: { type: string }
+    Module:
+      allOf:
+        - type: object
+          properties:
+            id: { type: string, format: uuid }
+            courseId: { type: string, format: uuid }
+            title: { type: string }
+            description: { type: string, nullable: true }
+            userId: { type: string, format: uuid }
+        - $ref: "#/components/schemas/Timestamps"
+    ModuleInput:
+      type: object
+      required: [title, courseId, userId]
+      properties:
+        title: { type: string }
+        description: { type: string }
+        courseId: { type: string, format: uuid }
+        userId: { type: string, format: uuid }
+    ModuleUpdate:
+      type: object
+      properties:
+        title: { type: string }
+        description: { type: string }
+    Content:
+      allOf:
+        - type: object
+          properties:
+            id: { type: string, format: uuid }
+            moduleId: { type: string, format: uuid }
+            title: { type: string }
+            content: { type: string }
+        - $ref: "#/components/schemas/Timestamps"
+    ContentInput:
+      type: object
+      required: [title, content, moduleId]
+      properties:
+        title: { type: string }
+        content: { type: string }
+        moduleId: { type: string, format: uuid }
+    ContentUpdate:
+      type: object
+      properties:
+        title: { type: string }
+        content: { type: string }
